@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "357897977629",
+    "project_id": "bridgeplate-7b7b5",
+    "storage_bucket": "bridgeplate-7b7b5.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:357897977629:android:4b8837711ed083e60a6bf4",
+        "android_client_info": {
+          "package_name": "com.example.ipfs"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNFmozdt1tvdA_ZIYbVV83BDR59qnwsH8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
