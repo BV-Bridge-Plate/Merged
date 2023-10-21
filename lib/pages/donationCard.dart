@@ -41,6 +41,7 @@ class _DonationCardState extends State<DonationCard> {
   Future<void> fetchdonationdetails() async {
     try {
       dondetails = await DetailService.fetchDonationDetailsByUserId(widget.id);
+      print(dondetails);
     } catch (error) {
       errorMessage = error.toString();
     } finally {

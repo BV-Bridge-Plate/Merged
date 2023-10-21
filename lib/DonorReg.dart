@@ -10,11 +10,13 @@ class DonorRegistration extends StatelessWidget {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   File? _selectedImage;
   String? _imageBase64;
 
   void _submitForm(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
+      await MongoDatabase.connect();
       int newUserId = await MongoDatabase.fetchLatestUserId();
       newUserId++; // Increment the ID
 
@@ -23,6 +25,7 @@ class DonorRegistration extends StatelessWidget {
         'name': _nameController.text,
         'email': _emailController.text,
         'password': _passController.text,
+        'phoneno': _phoneController.text,
         'photo': _imageBase64, // Store the base64 in the user data
         // Add other user data fields as needed
       };
@@ -59,7 +62,9 @@ class DonorRegistration extends StatelessWidget {
     );
   }
 
-  Future<void> _getImage() async {
+
+// Inside your _getImage function, update isImageSelected when an image is selected
+  Future<void> _getImage(BuildContext context) async {
     final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
@@ -68,6 +73,12 @@ class DonorRegistration extends StatelessWidget {
       List<int> imageBytes = _selectedImage!.readAsBytesSync();
       _imageBase64 = base64Encode(imageBytes);
       print(_imageBase64);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Image uploaded successfully!'),
+        ),
+      );
     }
   }
 
@@ -117,7 +128,7 @@ class DonorRegistration extends StatelessWidget {
                 SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () async {
-                    await _getImage();
+                    await _getImage(context);
                   },
                   icon: Icon(Icons.upload),
                   label: Text('Upload Image'),
@@ -174,6 +185,26 @@ class DonorRegistration extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 16),
+                TextFormField(
+                  controller: _phoneController,
+                  validator: (value) {
+                    // Simple validation: Check if the entered value is 10 digits
+                    // You might want to add more comprehensive validation based on your requirements
+                    if (value == null || value.length != 10) {
+                      return 'Please enter a valid 10-digit phone number';
+                    }
+                    // You can add more conditions, e.g., checking if the value consists only of numbers
+                    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                      return 'Phone number should contain only digits';
+                    }
+                    return null;
+                  },
+                  keyboardType: TextInputType.phone, // Set the keyboard type to phone
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                  ),
+                ),
+                SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
                     _showSuccessDialog(context);
@@ -210,7 +241,7 @@ class DonorRegistration extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Continue',
+                        'Register',
                         style: TextStyle(color: Colors.white),
                       ),
                     ],

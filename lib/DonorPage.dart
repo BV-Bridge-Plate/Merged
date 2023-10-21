@@ -3,12 +3,21 @@ import 'dart:convert';
 import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'dart:core';
 import 'DB/mongo2.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart';
+
 import 'DB/mongodb.dart';
+
 
 // Define a global variable to store the last donor ID
 String lastDonorId = 'A001';
+LatLng? destLocation;
+List<LatLng> polyLineCoordinates = [];
+LocationData? currentLocation;
+LatLng? sourceLocation;
+String? errorMessage;
 
 class DMenuList {
   const DMenuList(this.label, this.icon, this.selectedicon);
@@ -18,16 +27,13 @@ class DMenuList {
   final Widget selectedicon;
 }
 
+DateTime now = DateTime.now();
+String formattedDate = "${now.year}-${now.month}-${now.day} ${now.hour}:${now.minute}:${now.second}";
+
+
 const List<DMenuList> items = <DMenuList>[
-  DMenuList('profile', Icon(Icons.account_circle_outlined),
-      Icon(Icons.account_circle)),
-  DMenuList('page 0', Icon(Icons.widgets_outlined), Icon(Icons.widgets)),
-  DMenuList(
-      'page 1', Icon(Icons.format_paint_outlined), Icon(Icons.format_paint)),
-  DMenuList(
-      'page 2', Icon(Icons.text_snippet_outlined), Icon(Icons.text_snippet)),
-  DMenuList(
-      'page 3', Icon(Icons.invert_colors_on_outlined), Icon(Icons.opacity)),
+  DMenuList('Profile', Icon(Icons.account_circle_outlined), Icon(Icons.account_circle)),
+  DMenuList('Logout', Icon(Icons.logout), Icon(Icons.logout)),
 ];
 
 class Doner extends StatefulWidget {
@@ -36,20 +42,74 @@ class Doner extends StatefulWidget {
 }
 
 class _DonerState extends State<Doner> {
+  List records = [];
+  bool isLoading = true;
+
+  void getCurrentLocation() async {
+    Location location = Location();
+    try {
+      currentLocation = await location.getLocation();
+      setState(() {
+        sourceLocation = LatLng(currentLocation!.latitude!, currentLocation!.longitude!);
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+      });
+    }
+
+    location.onLocationChanged.listen((newloc) {
+      setState(() {
+        currentLocation = newloc;
+        sourceLocation = LatLng(newloc.latitude!, newloc.longitude!);
+      });
+    });
+  } @override
+  void initState(){
+    super.initState();
+    getCurrentLocation();
+    fetchData();
+  }
+  void fetchData() async {
+    await MongoDatabase2.connect();
+    print("Starting data fetch...");  // Added for debugging
+    records = await MongoDatabase2.fetchRecordsByDonor('1');
+    print("Data fetched. Refreshing UI.");  // Added for debugging
+    setState(() {
+      isLoading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Doner'),
+        title: Text(
+          "Donor",
+          style: TextStyle(color: Colors.black),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black), // Set icon color to black
+        leading: Builder(
+          builder: (BuildContext context) {
+            return IconButton(
+              icon: Icon(Icons.menu), // Use the menu icon for the drawer
+              onPressed: () {
+                Scaffold.of(context).openDrawer(); // Open the drawer
+              },
+            );
+          },
+        ),
       ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
             const DrawerHeader(
-              child: Text('Hello There'),
+              child: Text('Hello There',style: TextStyle(color: Colors.white),),
               decoration: BoxDecoration(
-                color: Colors.blue,
+                color: Colors.black,
               ),
             ),
             ...items.map((item) {
@@ -57,7 +117,11 @@ class _DonerState extends State<Doner> {
                 title: Text(item.label),
                 leading: item.icon,
                 onTap: () {
-                  Navigator.pop(context);
+                  if (item.label == 'Logout') {
+                      Navigator.pushNamedAndRemoveUntil(context, 'Donor', (route) => false);
+                  } else {
+                    Navigator.pop(context);  // This is for other drawer items, so it just closes the drawer.
+                  }
                 },
               );
             }).toList(),
@@ -88,17 +152,58 @@ class _DonerState extends State<Doner> {
 
             // Horizontal Scrolling Cards with a fixed height
             Container(
-              height: 250, // Adjust this value as needed
-              child: ListView.builder(
+              height: 250,
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator())  // Shows while data is being loaded
+                  : records.isEmpty
+                  ? Center(child: Text('No data found'))  // In case no records are found
+                  : ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: 10,
+                itemCount: records.length,
                 itemBuilder: (context, index) {
                   return Padding(
                     padding: const EdgeInsets.all(10.0),
                     child: Card(
+                      borderOnForeground: true,
+                      shape: RoundedRectangleBorder(  // Adds a border to the card
+                        side: BorderSide(color: Colors.grey.withOpacity(0.5), width: 1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Container(
                         width: 330,
-                        child: Center(child: Text('Card $index')),
+                        child: Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: Center(child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(
+                              color: Colors.black,
+                            ),
+                            children: <TextSpan>[
+                              TextSpan(
+                                text: 'Description: ',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  backgroundColor: Colors.yellow, // You can adjust this color for the highlight effect
+                                ),
+                              ),
+                              TextSpan(
+                                text: '${records[index]['desc']}.\n\n',
+                              ),
+                              TextSpan(
+                                text: 'Quantity: ',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  backgroundColor: Colors.yellow, // You can adjust this color for the highlight effect
+                                ),
+                              ),
+                              TextSpan(
+                                text: '${records[index]['qty']}',
+                              ),
+                            ],
+                          ),
+                        )
+                        ), // replace 'fieldName' with the field's name from your MongoDB document that you wish to display.
+                      ),
                       ),
                     ),
                   );
@@ -127,6 +232,8 @@ class _DonationFormState extends State<DonationForm> {
   bool _toggleValue1 = false;
   bool _toggleValue2 = false;
   DateTime? _expiryDate;
+  String? lat;
+  String? lan;
 
   Future<void> _pickImage() async {
     try {
@@ -178,20 +285,67 @@ class _DonationFormState extends State<DonationForm> {
     return lastDonorId;
   }
 
-  Future<void> _selectExpiryDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+  Future<void> _selectExpiryDateTime(BuildContext context) async {
+    final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: _expiryDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2101),
     );
 
-    if (picked != null && picked != _expiryDate) {
-      setState(() {
-        _expiryDate = picked;
-      });
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (pickedTime != null) {
+        final DateTime combinedDateTime = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime.hour,
+          pickedTime.minute,
+        );
+
+        setState(() {
+          _expiryDate = combinedDateTime;
+        });
+      }
     }
   }
+
+
+  void _showSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Success'),
+          content: Text('Data have been successfully saved!'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                _descriptionController.clear();
+                _quantityController.clear();
+                _radioValue = null;
+                _toggleValue1 = false;
+                _toggleValue2 = false;
+                _expiryDate = null;
+                _image = null;
+                _base64Image = null;
+
+                setState(() {});
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -199,8 +353,12 @@ class _DonationFormState extends State<DonationForm> {
       children: [
         TextField(
           controller: _descriptionController,
+          minLines: 5,
+          maxLines: 10,
+          keyboardType: TextInputType.multiline,
           decoration: const InputDecoration(
             labelText: 'Description',
+            hintText: "Describe here the food details and also the nutritional information",
             border: OutlineInputBorder(),
           ),
         ),
@@ -264,13 +422,25 @@ class _DonationFormState extends State<DonationForm> {
         ElevatedButton(
           onPressed: _pickImage,
           child: Text('Capture Image'),
+          style: ElevatedButton.styleFrom(
+            primary: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
+          ),
         ),
         SizedBox(height: 16),
         ElevatedButton(
           onPressed: () {
-            _selectExpiryDate(context);
+            _selectExpiryDateTime(context);
           },
           child: Text('Select Expiry Date'),
+          style: ElevatedButton.styleFrom(
+            primary: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
+          ),
         ),
         SizedBox(height: 16),
         if (_expiryDate != null)
@@ -285,7 +455,8 @@ class _DonationFormState extends State<DonationForm> {
         ElevatedButton(
           onPressed: () async {
             try {
-              await MongoDatabase.connect();
+
+              await MongoDatabase2.connect();
 
               Map<String, dynamic> donationData = {
                 'donorId': _generateDonorId(lastDonorId), // Generate the donor ID
@@ -294,7 +465,10 @@ class _DonationFormState extends State<DonationForm> {
                 'type': _radioValue == 0 ? 'Veg' : 'Non-Veg',
                 'Nuts': _toggleValue1 ? 'Yes' : 'No',
                 'Vegan': _toggleValue2 ? 'Yes' : 'No',
-                'expiryDate': _expiryDate?.toIso8601String(),
+                'Date': formattedDate,
+                'expiry': _expiryDate?.toIso8601String(),
+                'latitude': currentLocation!.latitude,
+                'longitude': currentLocation!.longitude,
               };
               if (_base64Image != null) {
                 donationData['photo'] = _base64Image!;
@@ -302,15 +476,15 @@ class _DonationFormState extends State<DonationForm> {
 
               await MongoDatabase2.insertDonation(donationData);
               print('Data saved successfully');
+              _showSuccessDialog(context);
             } catch (e) {
               print('Failed to save data: $e');
             }
           },
-          style: ButtonStyle(
-            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30.0),
-              ),
+          style: ElevatedButton.styleFrom(
+            primary: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
             ),
           ),
           child: const Padding(

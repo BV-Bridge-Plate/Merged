@@ -5,8 +5,10 @@ import 'package:ipfs/DoneReg.dart';
 import 'package:ipfs/DoneePage.dart';
 import 'package:ipfs/DonorPage.dart';
 import 'package:ipfs/DonorReg.dart';
+import 'package:ipfs/food.dart';
 import 'package:ipfs/landing.dart';
 import 'package:ipfs/new_choice.dart';
+import 'package:ipfs/table.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:ipfs/phone.dart';
@@ -36,13 +38,14 @@ Future<void> main() async {
           'Donee': (context) => DoneeRegistration(),
           'Donor': (context) => DonorRegistration(),
           'Donorr': (context) => Doner(),
-          'Doneee': (context) => NextPage()
+          'Doneee': (context) => NextPage(),
+          'table': (context) => DonationScreen()
         },
       ));
     } else {
       // If the user is not authenticated, navigate to the landing page
       runApp(MaterialApp(
-        initialRoute: 'landing',
+        initialRoute: 'choice',
         debugShowCheckedModeBanner: false,
         routes: {
           'phone': (context) => MyPhone(),
@@ -52,7 +55,9 @@ Future<void> main() async {
           'Donee': (context) => DoneeRegistration(),
           'Donor': (context) => DonorRegistration(),
           'Donorr': (context) => Doner(),
-          'Doneee': (context) => NextPage()
+          'Doneee': (context) => NextPage(),
+          'food': (context) => PizzaOrderPage(),
+          'table': (context) => DonationScreen()
         },
       ));
     }

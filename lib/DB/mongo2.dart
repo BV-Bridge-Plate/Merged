@@ -12,6 +12,13 @@ class MongoDatabase2 {
     userCollection = db.collection(USER_COLLECTION);
   }
 
+  static Future<List<Map<String, dynamic>>> fetchRecordsByDonor(String donorId) async {
+    print("Fetching data from database..."); // Added for debugging
+    List<Map<String, dynamic>> records = await userCollection.find(where.eq('donerid', donorId)).toList();
+    print("Fetched ${records.length} records."); // Added for debugging
+    return records;
+  }
+
   static Future<void> insertDonation(Map<String, dynamic> donationData) async {
     await userCollection.insert(donationData);
   }

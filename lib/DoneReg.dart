@@ -10,20 +10,19 @@ class DoneeRegistration extends StatelessWidget {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
-  File? _selectedImage;
-  String? _imageBase64;
+  final TextEditingController _phoneController = TextEditingController();
 
   void _submitForm(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
+      await MongoDatabase1.connect();
       int newUserId = await MongoDatabase1.fetchLatestUserId();
       newUserId++; // Increment the ID
-
       var userData = {
-        'id': newUserId,
+        'userid': newUserId,
         'name': _nameController.text,
         'email': _emailController.text,
         'password': _passController.text,
-        'photo': _imageBase64, // Store the base64 in the user data
+        'phoneno': _phoneController.text
         // Add other user data fields as needed
       };
 
@@ -59,18 +58,6 @@ class DoneeRegistration extends StatelessWidget {
     );
   }
 
-  Future<void> _getImage() async {
-    final pickedFile = await ImagePicker().getImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      _selectedImage = File(pickedFile.path);
-      // Convert the selected image to base64
-      List<int> imageBytes = _selectedImage!.readAsBytesSync();
-      _imageBase64 = base64Encode(imageBytes);
-      print(_imageBase64);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,30 +91,6 @@ class DoneeRegistration extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (_selectedImage != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(50.0),
-                    child: Image.file(
-                      _selectedImage!,
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    await _getImage();
-                  },
-                  icon: Icon(Icons.upload),
-                  label: Text('Upload Image'),
-                  style: ElevatedButton.styleFrom(
-                    primary: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                ),
                 SizedBox(height: 16),
                 TextFormField(
                   controller: _nameController,
@@ -171,6 +134,26 @@ class DoneeRegistration extends StatelessWidget {
                   obscureText: true, // Set this property to true to hide the password
                   decoration: const InputDecoration(
                     labelText: 'Password',
+                  ),
+                ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _phoneController,
+                  validator: (value) {
+                    // Simple validation: Check if the entered value is 10 digits
+                    // You might want to add more comprehensive validation based on your requirements
+                    if (value == null || value.length != 10) {
+                      return 'Please enter a valid 10-digit phone number';
+                    }
+                    // You can add more conditions, e.g., checking if the value consists only of numbers
+                    if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                      return 'Phone number should contain only digits';
+                    }
+                    return null;
+                  },
+                  keyboardType: TextInputType.phone, // Set the keyboard type to phone
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
                   ),
                 ),
                 SizedBox(height: 16),

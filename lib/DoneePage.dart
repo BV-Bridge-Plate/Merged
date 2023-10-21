@@ -42,6 +42,10 @@ class _LandingState extends State<Landing> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+      ),
       backgroundColor: Colors.black,
       body: Center(
         // Using SpinKitDancingSquare for the loader animation
@@ -95,11 +99,11 @@ class _NextPageState extends State<NextPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SvgPicture.asset(
-              'assets/images/Logo.svg',
-              width: 100.0,
-              height: 100.0,
-            ),
+            // SvgPicture.asset(
+            //   'assets/images/Logo.svg',
+            //   width: 100.0,
+            //   height: 100.0,
+            // ),
             const Text('bridge plate'),
           ],
         ),
